@@ -6,9 +6,17 @@ def counter():
         yield i
         i += 1
 
+
+
 # Create a stream with a source function
 s = Stream.source(counter(), dtype='int').rename("Counter")
-feed = DataFeed([s])
+s2 = Stream.source(range(20,100), dtype='int').rename("Counter2")
+
+
+# A list of stream becomes a datafeed. We typically operate on the feed
+feed = DataFeed([s, s2])
+
+# feed needs to be compiled, I guess
 feed.compile()
 
 
