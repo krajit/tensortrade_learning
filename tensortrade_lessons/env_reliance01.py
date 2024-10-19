@@ -56,8 +56,12 @@ env = create(
 # 7. Test the Environment
 obs = env.reset()
 done = False
+truncated = False
 
 while not done:
     action = env.action_space.sample()  # Take a random action
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, truncated, info = env.step(action)
     print(f"Action: {action}, Reward: {reward}")
+
+
+
