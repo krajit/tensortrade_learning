@@ -66,20 +66,70 @@ obs = env.reset()
 done = False
 truncated = False
 
-while not done:
-    action = env.action_space.sample()  # Take a random action
+# while not done:
+#     action = env.action_space.sample()  # Take a random action
+#     obs, reward, done, truncated, info = env.step(action)
+#     print(f"Action: {action}, Reward: {reward}")
+
+
+
+# portfolio.ledger.as_frame().to_csv("ledger.csv")
+# print("done")
+
+import ray
+import numpy as np
+import pandas as pd
+
+from ray import tune
+from ray.tune.registry import register_env
+
+def create_env(config):
+    return env 
+
+register_env("TradingEnv", create_env)
+
+
+from ray.rllib.algorithms.ppo import PPOConfig
+
+config = (  # 1. Configure the algorithm,
+    PPOConfig()
+    .environment("TradingEnv")
+    .env_runners(num_env_runners=2)
+    .framework("torch")
+    .training(model={"fcnet_hiddens": [64, 64]})
+    .evaluation(evaluation_num_env_runners=1)
+)
+
+algo = config.build()  # 2. build the algorithm,
+
+# for _ in range(5):
+#     print(algo.train())  # 3. train it,g
+
+# algo.evaluate()  # 4. and evaluate it.
+
+# Save the trained model to a directory
+checkpoint_dir = "ppo_trading_model"
+# algo.save(checkpoint_dir)
+# save_result = algo.save()
+# #print(f"Model saved at {checkpoint_dir}")
+# path_to_checkpoint = save_result.checkpoint.path
+# print(
+#     "An Algorithm checkpoint has been created inside directory: "
+#     f"'{path_to_checkpoint}'."
+# )
+
+import os
+checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model")
+
+algo.restore(checkpoint_dir)
+print("restoration done")
+
+
+# Test inference
+obs, _ = env.reset()
+done, truncated = False, False
+
+while not done and not truncated:
+    action = algo.compute_single_action(obs)
     obs, reward, done, truncated, info = env.step(action)
     print(f"Action: {action}, Reward: {reward}")
-
-
-
-portfolio.ledger.as_frame().to_csv("ledger.csv")
-print("done")
-
-
-from tensortrade.agents import DQNAgent
-
-agent = DQNAgent(env)
-
-# Set render_interval to None to render at episode ends only
-agent.train(n_episodes=2, n_steps=200, render_interval=10)

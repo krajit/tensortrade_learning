@@ -103,6 +103,6 @@ config = (  # 1. Configure the algorithm,
 algo = config.build()  # 2. build the algorithm,
 
 for _ in range(500):
-    print(algo.train())  # 3. train it,
+    print(algo.train())  # 3. train it,g
 
 algo.evaluate()  # 4. and evaluate it.
