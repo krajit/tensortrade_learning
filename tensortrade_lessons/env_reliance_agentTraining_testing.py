@@ -119,17 +119,29 @@ checkpoint_dir = "ppo_trading_model"
 # )
 
 import os
-checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model")
+checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
 
 algo.restore(checkpoint_dir)
 print("restoration done")
 
 
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
 # Test inference
 obs, _ = env.reset()
 done, truncated = False, False
-
+steps = 0
 while not done and not truncated:
-    action = algo.compute_single_action(obs)
+    steps += 1
+    #action = algo.compute_single_action(obs)
+    action = env.action_space.sample()
     obs, reward, done, truncated, info = env.step(action)
-    print(f"Action: {action}, Reward: {reward}")
+    print(f"Action: {action}, Reward: {reward}, Portfolio Net Value: {portfolio.net_worth}, Steps: {steps}")
+
+performance = pd.DataFrame.from_dict(env.action_scheme.portfolio.performance, orient='index')
+performance.plot()
+plt.show()
+print("done")

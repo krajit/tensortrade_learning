@@ -106,3 +106,25 @@ for _ in range(500):
     print(algo.train())  # 3. train it,g
 
 algo.evaluate()  # 4. and evaluate it.
+
+# Save the trained model to a directory
+checkpoint_dir = "ppo_trading_model_reliance"
+save_result = algo.save(checkpoint_dir)
+
+
+# steps to load and run trained model
+# import os
+# checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
+
+# algo.restore(checkpoint_dir)
+# print("restoration done")
+
+
+# # Test inference
+# obs, _ = env.reset()
+# done, truncated = False, False
+
+# while not done and not truncated:
+#     action = algo.compute_single_action(obs)
+#     obs, reward, done, truncated, info = env.step(action)
+#     print(f"Action: {action}, Reward: {reward}")
