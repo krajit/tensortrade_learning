@@ -9,6 +9,13 @@ from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
 import tensortrade.env.default as default
 import pandas as pd
+import ray
+import numpy as np
+import pandas as pd
+
+from ray import tune
+from ray.tune.registry import register_env
+
 
 
 # 1. Define Instruments
@@ -24,8 +31,10 @@ RELIANCE = Instrument("RELIANCE", 8, 'Reliance Ind Ltd')  # Stock with 2 decimal
 data = pd.read_csv('datafile.csv')
 
 # 3. Create Data Streams
-price_stream = Stream.source(data['Close'].tolist(), dtype="float").rename("INR-RELIANCE")
-volume_stream = Stream.source(data['Volume'].tolist(), dtype="float").rename("RELIANCE_VOLUME")
+# 3. Create Data Streams
+price_stream = Stream.source(np.array(data["Close"]).reshape(-1), dtype="float").rename("INR-RELIANCE")
+volume_stream = Stream.source(np.array(data["Volume"]).reshape(-1), dtype="float").rename("RELIANCE_VOLUME")
+
 
 
 # 4. Set up DataFeed
@@ -76,12 +85,6 @@ truncated = False
 # portfolio.ledger.as_frame().to_csv("ledger.csv")
 # print("done")
 
-import ray
-import numpy as np
-import pandas as pd
-
-from ray import tune
-from ray.tune.registry import register_env
 
 def create_env(config):
     return env 
@@ -102,7 +105,7 @@ config = (  # 1. Configure the algorithm,
 
 algo = config.build()  # 2. build the algorithm,
 
-for _ in range(500):
+for _ in range(5):
     print(algo.train())  # 3. train it,g
 
 algo.evaluate()  # 4. and evaluate it.
