@@ -65,7 +65,7 @@ truncated = False
 
 while not done:
     action = env.action_space.sample()  # Take a random action
-    obs, reward, done,  info = env.step(action)
+    obs, reward, done, truncated, info = env.step(action)
     print("obs: ", obs)
     print(f"Action: {action}, Reward: {reward}")
 

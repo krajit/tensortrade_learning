@@ -86,8 +86,18 @@ truncated = False
 # print("done")
 
 
+# def create_env(config):
+#     return env 
+
+# register_env("TradingEnv", create_env)
+
+
+
+
+from gymnasium.wrappers import FlattenObservation
 def create_env(config):
-    return env 
+    
+    return FlattenObservation(env)
 
 register_env("TradingEnv", create_env)
 
@@ -111,23 +121,50 @@ for _ in range(5):
 algo.evaluate()  # 4. and evaluate it.
 
 # Save the trained model to a directory
-checkpoint_dir = "ppo_trading_model_reliance"
-save_result = algo.save(checkpoint_dir)
+# checkpoint_dir = "ppo_trading_model_reliance"
+# save_result = algo.save(checkpoint_dir)
+save_result = algo.save()
+path_to_checkpoint = save_result.checkpoint.path
+print(
+    "An Algorithm checkpoint has been created inside directory: "
+    f"'{path_to_checkpoint}'."
+)
 
 
-# steps to load and run trained model
-# import os
-# checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
+import matplotlib.pyplot as plt
 
-# algo.restore(checkpoint_dir)
-# print("restoration done")
+import pathlib
+import gymnasium as gym
+import numpy as np
+import torch
+from ray.rllib.core.rl_module import RLModule
 
+# Create only the neural network (RLModule) from our checkpoint.
+rl_module = RLModule.from_checkpoint(
+    pathlib.Path(save_result.checkpoint.path) / "learner_group" / "learner" / "rl_module"
+)["default_policy"]
 
-# # Test inference
-# obs, _ = env.reset()
-# done, truncated = False, False
+episode_return = 0
+terminated = truncated = False
 
-# while not done and not truncated:
-#     action = algo.compute_single_action(obs)
-#     obs, reward, done, truncated, info = env.step(action)
-#     print(f"Action: {action}, Reward: {reward}")
+obs, info = env.reset()
+
+while not terminated and not truncated:
+    # Compute the next action from a batch (B=1) of observations.
+    torch_obs_batch = torch.from_numpy(np.array([obs]))
+    action_logits = rl_module.forward_inference({"obs": torch_obs_batch})[
+        "action_dist_inputs"
+    ]
+    # The default RLModule used here produces action logits (from which
+    # we'll have to sample an action or use the max-likelihood one).
+    action = torch.argmax(action_logits[0]).numpy()
+    obs, reward, terminated, truncated, info = env.step(action)
+    episode_return += reward
+
+print(f"Reached episode return of {episode_return}.")
+
+performance = pd.DataFrame.from_dict(env.action_scheme.portfolio.performance, orient='index')
+performance.plot()
+plt.show()
+print("done")
+

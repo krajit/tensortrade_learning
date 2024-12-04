@@ -8,7 +8,7 @@ from tensortrade.oms.instruments import Instrument
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
 import tensortrade.env.default as default
-import pandas as pd
+import pandas as pd, numpy as np
 
 
 # 1. Define Instruments
@@ -24,8 +24,8 @@ RELIANCE = Instrument("RELIANCE", 8, 'Reliance Ind Ltd')  # Stock with 2 decimal
 data = pd.read_csv('datafile.csv')
 
 # 3. Create Data Streams
-price_stream = Stream.source(data['Close'].tolist(), dtype="float").rename("INR-RELIANCE")
-volume_stream = Stream.source(data['Volume'].tolist(), dtype="float").rename("RELIANCE_VOLUME")
+price_stream = Stream.source(np.array(data["Close"]).reshape(-1), dtype="float").rename("INR-RELIANCE")
+volume_stream = Stream.source(np.array(data["Volume"]).reshape(-1), dtype="float").rename("RELIANCE_VOLUME")
 
 
 # 4. Set up DataFeed
@@ -83,8 +83,10 @@ import pandas as pd
 from ray import tune
 from ray.tune.registry import register_env
 
+from gymnasium.wrappers import FlattenObservation
 def create_env(config):
-    return env 
+    
+    return FlattenObservation(env)
 
 register_env("TradingEnv", create_env)
 
@@ -108,7 +110,7 @@ algo = config.build()  # 2. build the algorithm,
 # algo.evaluate()  # 4. and evaluate it.
 
 # Save the trained model to a directory
-checkpoint_dir = "ppo_trading_model"
+checkpoint_dir = "/tmp/tmpusp4uxgp"
 # algo.save(checkpoint_dir)
 # save_result = algo.save()
 # #print(f"Model saved at {checkpoint_dir}")
@@ -118,8 +120,8 @@ checkpoint_dir = "ppo_trading_model"
 #     f"'{path_to_checkpoint}'."
 # )
 
-import os
-checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
+#import os
+#checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
 
 algo.restore(checkpoint_dir)
 print("restoration done")
@@ -129,17 +131,37 @@ print("restoration done")
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import pathlib
+import gymnasium as gym
+import numpy as np
+import torch
+from ray.rllib.core.rl_module import RLModule
 
-# Test inference
-obs, _ = env.reset()
-done, truncated = False, False
-steps = 0
-while not done and not truncated:
-    steps += 1
-    #action = algo.compute_single_action(obs)
-    action = env.action_space.sample()
-    obs, reward, done, truncated, info = env.step(action)
-    print(f"Action: {action}, Reward: {reward}, Portfolio Net Value: {portfolio.net_worth}, Steps: {steps}")
+env = gym.make("CartPole-v1")
+
+# Create only the neural network (RLModule) from our checkpoint.
+rl_module = RLModule.from_checkpoint(
+    pathlib.Path(checkpoint_dir.path) / "learner_group" / "learner" / "rl_module"
+)["default_policy"]
+
+episode_return = 0
+terminated = truncated = False
+
+obs, info = env.reset()
+
+while not terminated and not truncated:
+    # Compute the next action from a batch (B=1) of observations.
+    torch_obs_batch = torch.from_numpy(np.array([obs]))
+    action_logits = rl_module.forward_inference({"obs": torch_obs_batch})[
+        "action_dist_inputs"
+    ]
+    # The default RLModule used here produces action logits (from which
+    # we'll have to sample an action or use the max-likelihood one).
+    action = torch.argmax(action_logits[0]).numpy()
+    obs, reward, terminated, truncated, info = env.step(action)
+    episode_return += reward
+
+print(f"Reached episode return of {episode_return}.")
 
 performance = pd.DataFrame.from_dict(env.action_scheme.portfolio.performance, orient='index')
 performance.plot()
