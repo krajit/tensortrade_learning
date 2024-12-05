@@ -147,6 +147,7 @@ rl_module = RLModule.from_checkpoint(
 episode_return = 0
 terminated = truncated = False
 
+env = create_env(config);
 obs, info = env.reset()
 
 while not terminated and not truncated:
@@ -163,7 +164,7 @@ while not terminated and not truncated:
 
 print(f"Reached episode return of {episode_return}.")
 
-performance = pd.DataFrame.from_dict(env.action_scheme.portfolio.performance, orient='index')
+performance = pd.DataFrame.from_dict(env.unwrapped.action_scheme.portfolio.performance, orient='index')
 performance.plot()
 plt.show()
 print("done")

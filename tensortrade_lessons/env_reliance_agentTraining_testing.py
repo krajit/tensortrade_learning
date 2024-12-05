@@ -8,7 +8,14 @@ from tensortrade.oms.instruments import Instrument
 from tensortrade.oms.exchanges import Exchange
 from tensortrade.oms.services.execution.simulated import execute_order
 import tensortrade.env.default as default
-import pandas as pd, numpy as np
+import pandas as pd
+import ray
+import numpy as np
+import pandas as pd
+
+from ray import tune
+from ray.tune.registry import register_env
+
 
 
 # 1. Define Instruments
@@ -24,8 +31,10 @@ RELIANCE = Instrument("RELIANCE", 8, 'Reliance Ind Ltd')  # Stock with 2 decimal
 data = pd.read_csv('datafile.csv')
 
 # 3. Create Data Streams
+# 3. Create Data Streams
 price_stream = Stream.source(np.array(data["Close"]).reshape(-1), dtype="float").rename("INR-RELIANCE")
 volume_stream = Stream.source(np.array(data["Volume"]).reshape(-1), dtype="float").rename("RELIANCE_VOLUME")
+
 
 
 # 4. Set up DataFeed
@@ -76,12 +85,14 @@ truncated = False
 # portfolio.ledger.as_frame().to_csv("ledger.csv")
 # print("done")
 
-import ray
-import numpy as np
-import pandas as pd
 
-from ray import tune
-from ray.tune.registry import register_env
+# def create_env(config):
+#     return env 
+
+# register_env("TradingEnv", create_env)
+
+
+
 
 from gymnasium.wrappers import FlattenObservation
 def create_env(config):
@@ -109,26 +120,17 @@ algo = config.build()  # 2. build the algorithm,
 
 # algo.evaluate()  # 4. and evaluate it.
 
-# Save the trained model to a directory
-checkpoint_dir = "/tmp/tmpusp4uxgp"
-# algo.save(checkpoint_dir)
+# # Save the trained model to a directory
+# # checkpoint_dir = "ppo_trading_model_reliance"
+# # save_result = algo.save(checkpoint_dir)
 # save_result = algo.save()
-# #print(f"Model saved at {checkpoint_dir}")
 # path_to_checkpoint = save_result.checkpoint.path
 # print(
 #     "An Algorithm checkpoint has been created inside directory: "
 #     f"'{path_to_checkpoint}'."
 # )
 
-#import os
-#checkpoint_dir = os.path.join("C:\\Users\\ajit.kumar\\Documents\\GitHub\\tensortrade_learning\\ppo_trading_model_reliance")
 
-algo.restore(checkpoint_dir)
-print("restoration done")
-
-
-
-import pandas as pd
 import matplotlib.pyplot as plt
 
 import pathlib
@@ -137,16 +139,17 @@ import numpy as np
 import torch
 from ray.rllib.core.rl_module import RLModule
 
-env = gym.make("CartPole-v1")
+checkpoint_dir = "/tmp/tmpqvjd8coe"
 
 # Create only the neural network (RLModule) from our checkpoint.
 rl_module = RLModule.from_checkpoint(
-    pathlib.Path(checkpoint_dir.path) / "learner_group" / "learner" / "rl_module"
+    checkpoint_dir + "/learner_group/learner/rl_module"
 )["default_policy"]
 
 episode_return = 0
 terminated = truncated = False
 
+env = create_env(config);
 obs, info = env.reset()
 
 while not terminated and not truncated:
@@ -163,7 +166,8 @@ while not terminated and not truncated:
 
 print(f"Reached episode return of {episode_return}.")
 
-performance = pd.DataFrame.from_dict(env.action_scheme.portfolio.performance, orient='index')
+performance = pd.DataFrame.from_dict(env.unwrapped.action_scheme.portfolio.performance, orient='index')
 performance.plot()
 plt.show()
 print("done")
+
